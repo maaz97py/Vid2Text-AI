@@ -1,5 +1,7 @@
-streamlit
 torch
+torchvision
+torchaudio
+streamlit
 faster-whisper
 transformers
 yt-dlp
