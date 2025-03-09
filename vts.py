@@ -6,6 +6,15 @@ from faster_whisper import WhisperModel
 from transformers import pipeline
 import yt_dlp
 from deep_translator import GoogleTranslator
+import subprocess
+
+# Ensure PyTorch is installed at runtime
+try:
+    import torch
+except ModuleNotFoundError:
+    subprocess.run(["pip", "install", "torch torchvision torchaudio -f https://download.pytorch.org/whl/cpu.html"])
+    import torch
+
 
 # Set Page Config
 st.set_page_config(page_title="Vid2Text-AI | Video Transcript Summarizer", layout="wide")
