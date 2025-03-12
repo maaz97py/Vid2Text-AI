@@ -1,6 +1,0 @@
-streamlit
-torch
-faster-whisper
-transformers
-yt-dlp
-deep-translator
