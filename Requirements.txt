@@ -1,7 +1,5 @@
 streamlit
-torch==2.1.2+cpu -f https://download.pytorch.org/whl/torch_stable.html
-torchaudio==2.1.2
-torchvision==0.16.2
+torch
 faster-whisper
 transformers
 yt-dlp
