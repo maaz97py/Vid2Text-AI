@@ -6,18 +6,9 @@ from faster_whisper import WhisperModel
 from transformers import pipeline
 import yt_dlp
 from deep_translator import GoogleTranslator
-import subprocess
-
-# Ensure PyTorch is installed at runtime
-try:
-    import torch
-except ModuleNotFoundError:
-    subprocess.run(["pip", "install", "torch torchvision torchaudio -f https://download.pytorch.org/whl/cpu.html"])
-    import torch
-
 
 # Set Page Config
-st.set_page_config(page_title="Vid2Text-AI | Video Transcript Summarizer", layout="wide")
+st.set_page_config(page_title="Video Transcript Summarizer", layout="wide")
 
 # ---- Function to Set Background Image ----
 def set_background(image_file):
@@ -33,17 +24,6 @@ def set_background(image_file):
                 background-position: center;
                 background-attachment: fixed;
             }}
-            .title {{
-                font-size: 40px;
-                font-weight: bold;
-                text-align: center;
-                color: #1E90FF;
-            }}
-            .subtitle {{
-                font-size: 22px;
-                text-align: center;
-                color: #808080;
-            }}
         </style>
         """,
         unsafe_allow_html=True
@@ -53,8 +33,7 @@ def set_background(image_file):
 set_background("background.jpeg")
 
 # ---- UI Title & Description ----
-st.markdown('<p class="title">Vid2Text-AI</p>', unsafe_allow_html=True)
-st.markdown('<p class="subtitle">Video Transcript Summarizer</p>', unsafe_allow_html=True)
+st.title("🎥 Video Transcript Summarizer")  # Fix Unicode error by directly using emoji
 
 st.write("Enter a YouTube video link to extract and summarize the transcript.")
 
