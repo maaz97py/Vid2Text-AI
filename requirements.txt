@@ -1,8 +1,10 @@
 streamlit
 faster-whisper
-yt-dlp
+transformers
+torch
+torchvision
+torchaudio
+numpy
 ffmpeg-python
 av
-numpy
-torch
-transformers
+yt-dlp
