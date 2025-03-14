@@ -64,7 +64,8 @@ process_button = st.button("▶ Process Video")  # Process Button
 
 if process_button and video_url:
     with tempfile.TemporaryDirectory() as temp_dir:
-        audio_path = os.path.join(temp_dir, "temp_audio.wav")
+        audio_filename = "temp_audio.wav"
+        audio_path = os.path.join(temp_dir, audio_filename)
         
         with st.spinner("🔊 Extracting audio from video..."):
             try:
@@ -75,11 +76,16 @@ if process_button and video_url:
                         'preferredcodec': 'wav',
                         'preferredquality': '192',
                     }],
-                    'outtmpl': audio_path,
+                    'outtmpl': os.path.join(temp_dir, '%(id)s.%(ext)s'),
                     'quiet': True,
                 }
                 with yt_dlp.YoutubeDL(ydl_opts) as ydl:
-                    ydl.download([video_url])
+                    info = ydl.extract_info(video_url, download=True)
+                    downloaded_filename = os.path.join(temp_dir, f"{info['id']}.wav")
+                    if os.path.exists(downloaded_filename):
+                        os.rename(downloaded_filename, audio_path)
+                    else:
+                        raise FileNotFoundError("Downloaded audio file not found.")
                 st.success("✅ Audio extraction completed!")
             except Exception as e:
                 st.error(f"❌ Error extracting audio: {e}")
