@@ -6,6 +6,7 @@ from faster_whisper import WhisperModel
 from transformers import pipeline
 import yt_dlp
 from deep_translator import GoogleTranslator
+import tempfile
 
 # ---- Set Page Config ----
 st.set_page_config(page_title="Video Transcript Summarizer", layout="wide")
@@ -61,91 +62,81 @@ summary_format = st.sidebar.selectbox("📌 Choose Summary Format", ["Paragraph"
 video_url = st.text_input("🔗 Enter YouTube Video URL:")
 process_button = st.button("▶ Process Video")  # Process Button
 
-audio_path = "temp_audio.mp3"
-
 if process_button and video_url:
-    with st.spinner("🔊 Extracting audio from video..."):
-        try:
-            ydl_opts = {
-                'format': 'bestaudio/best',
-                'extract_audio': True,
-                'audio_format': 'mp3',
-                'outtmpl': audio_path,
-                'quiet': True,
-            }
-            with yt_dlp.YoutubeDL(ydl_opts) as ydl:
-                ydl.download([video_url])
-            st.success("✅ Audio extraction completed!")
-        except Exception as e:
-            st.error(f"❌ Error extracting audio: {e}")
+    with tempfile.TemporaryDirectory() as temp_dir:
+        audio_path = os.path.join(temp_dir, "temp_audio.wav")
+        
+        with st.spinner("🔊 Extracting audio from video..."):
+            try:
+                ydl_opts = {
+                    'format': 'bestaudio/best',
+                    'postprocessors': [{
+                        'key': 'FFmpegExtractAudio',
+                        'preferredcodec': 'wav',
+                        'preferredquality': '192',
+                    }],
+                    'outtmpl': audio_path,
+                    'quiet': True,
+                }
+                with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+                    ydl.download([video_url])
+                st.success("✅ Audio extraction completed!")
+            except Exception as e:
+                st.error(f"❌ Error extracting audio: {e}")
+                st.stop()
 
-    # ---- Step 2: Transcribe Audio (English Only) ----
-    with st.spinner("📝 Transcribing audio in English..."):
-        device = "cpu"  # Optimized for CPU
-        model_size = "small"
+        # ---- Step 2: Transcribe Audio ----
+        with st.spinner("📝 Transcribing audio in English..."):
+            device = "cpu"  # Optimized for CPU
+            model_size = "small"
 
-        model = WhisperModel(model_size, device=device, compute_type="int8")
-        segments, _ = model.transcribe(audio_path, beam_size=2, language="en")  # Force English for accuracy
+            model = WhisperModel(model_size, device=device, compute_type="int8")
+            
+            if os.path.exists(audio_path):
+                segments, _ = model.transcribe(audio_path, beam_size=2, language="en")
+                transcript_text = " ".join(segment.text for segment in segments).strip()
+                
+                if transcript_text:
+                    st.success("✅ Transcription completed!")
+                    st.text_area("📜 Full Transcript (English):", transcript_text, height=200)
+                else:
+                    st.error("❌ No text transcribed from the audio.")
+                    st.stop()
+            else:
+                st.error("❌ Audio file not found.")
+                st.stop()
 
-        transcript_text = " ".join(segment.text for segment in segments).strip()
-        if transcript_text:
-            st.success("✅ Transcription completed!")
-            st.text_area("📜 Full Transcript (English):", transcript_text, height=200)
-        else:
-            st.error("❌ No text transcribed from the audio.")
-
-    # ---- Step 3: Translate Transcript ----
-    with st.spinner(f"🌍 Translating transcript to {transcript_lang}..."):
-        if transcript_text.strip():
+        # ---- Step 3: Translate Transcript ----
+        with st.spinner(f"🌍 Translating transcript to {transcript_lang}..."):
             translated_transcript = GoogleTranslator(source="auto", target=languages[transcript_lang]).translate(transcript_text)
             st.success("✅ Transcript translation completed!")
             st.text_area(f"📜 Transcript in {transcript_lang}:", translated_transcript, height=200)
-        else:
-            st.error("❌ Error: No transcript available for translation.")
-            translated_transcript = ""
 
-    # ---- Step 4: Summarize Transcript ----
-    with st.spinner("📄 Summarizing transcript..."):
-        summarizer = pipeline("summarization", model="sshleifer/distilbart-cnn-12-6", device=-1)  # Faster model
+        # ---- Step 4: Summarize Transcript ----
+        with st.spinner("📄 Summarizing transcript..."):
+            summarizer = pipeline("summarization", model="sshleifer/distilbart-cnn-12-6", device=-1)
 
-        def chunk_text(text, max_words=400):
-            words = text.split()
-            return [" ".join(words[i:i + max_words]) for i in range(0, len(words), max_words)] if words else []
+            def chunk_text(text, max_words=400):
+                words = text.split()
+                return [" ".join(words[i:i + max_words]) for i in range(0, len(words), max_words)] if words else []
 
-        if transcript_text.strip():
             chunks = chunk_text(transcript_text, max_words=400)
+            summary_text = ""
+            
+            for chunk in chunks:
+                summary_result = summarizer(chunk, max_length=150, min_length=50, do_sample=False)
+                summary_text += summary_result[0]["summary_text"] + " "
 
-            if not chunks:
-                st.error("❌ Error: Failed to split transcript into chunks.")
-                summary_text = ""
-            else:
-                summary_text = ""
-                try:
-                    for chunk in chunks:
-                        summary_result = summarizer(chunk, max_length=150, min_length=50, do_sample=False)
-                        summary_text += summary_result[0]["summary_text"] + " "
+            if summary_format == "Bullet Points":
+                summary_text = "\n".join([f"- {sentence}" for sentence in summary_text.split(". ") if sentence])
+            elif summary_format == "Key Highlights":
+                summary_text = "\n".join([f"✔ {sentence}" for sentence in summary_text.split(". ")[:5]])
 
-                    # ---- Format Summary Based on User Selection ----
-                    if summary_format == "Bullet Points":
-                        summary_text = "\n".join([f"- {sentence}" for sentence in summary_text.split(". ") if sentence])
-                    elif summary_format == "Key Highlights":
-                        summary_text = "\n".join([f"✔ {sentence}" for sentence in summary_text.split(". ")[:5]])
+            st.success("✅ Summary generated!")
+            st.text_area(f"📌 Summary ({summary_format}):", summary_text, height=150)
 
-                    st.success("✅ Summary generated!")
-                    st.text_area(f"📌 Summary ({summary_format}):", summary_text, height=150)
-
-                except Exception as e:
-                    st.error(f"❌ Error summarizing: {e}")
-                    summary_text = ""
-
-    # ---- Step 5: Translate Summary ----
-    with st.spinner(f"🌍 Translating summary to {summary_lang}..."):
-        if summary_text.strip():
+        # ---- Step 5: Translate Summary ----
+        with st.spinner(f"🌍 Translating summary to {summary_lang}..."):
             translated_summary = GoogleTranslator(source="auto", target=languages[summary_lang]).translate(summary_text)
             st.success("✅ Summary translation completed!")
             st.text_area(f"📌 Summary in {summary_lang}:", translated_summary, height=150)
-        else:
-            st.error("❌ Error: No summary available for translation.")
-
-    # ---- Clean Up ----
-    os.remove(audio_path)
