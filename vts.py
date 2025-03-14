@@ -58,7 +58,7 @@ summary_lang = st.sidebar.selectbox("📄 Select Summary Language", list(languag
 video_url = st.text_input("🔗 Enter YouTube Video URL:")
 process_button = st.button("▶ Process Video")  # Process Button
 
-audio_path = "temp_audio.mp3"
+audio_path = f"/tmp/audio.wav"
 
 if process_button and video_url:
     with st.spinner("🔊 Extracting audio from video..."):
