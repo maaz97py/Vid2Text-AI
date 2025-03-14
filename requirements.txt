@@ -7,4 +7,5 @@ torchaudio
 numpy
 ffmpeg-python
 av
+deep-translator
 yt-dlp
