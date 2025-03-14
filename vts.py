@@ -7,7 +7,7 @@ from transformers import pipeline
 import yt_dlp
 from deep_translator import GoogleTranslator
 
-# Set Page Config
+# ---- Set Page Config ----
 st.set_page_config(page_title="Video Transcript Summarizer", layout="wide")
 
 # ---- Function to Set Background Image ----
@@ -33,11 +33,11 @@ def set_background(image_file):
 set_background("background.jpeg")
 
 # ---- UI Title & Description ----
-st.title("🎥 Video Transcript Summarizer")  # Fix Unicode error by directly using emoji
+st.title("🎥 Video Transcript Summarizer")
 
 st.write("Enter a YouTube video link to extract and summarize the transcript.")
 
-# ---- Language Selection ----
+# ---- Sidebar: Language & Summary Format Selection ----
 st.sidebar.header("🌍 Language Options")
 languages = {
     "English": "en",
@@ -54,11 +54,14 @@ languages = {
 transcript_lang = st.sidebar.selectbox("📜 Select Transcript Language", list(languages.keys()))
 summary_lang = st.sidebar.selectbox("📄 Select Summary Language", list(languages.keys()))
 
+st.sidebar.header("📝 Summary Format")
+summary_format = st.sidebar.selectbox("📌 Choose Summary Format", ["Paragraph", "Bullet Points", "Key Highlights"])
+
 # ---- Video URL Input ----
 video_url = st.text_input("🔗 Enter YouTube Video URL:")
 process_button = st.button("▶ Process Video")  # Process Button
 
-audio_path = f"/tmp/audio.wav"
+audio_path = "temp_audio.mp3"
 
 if process_button and video_url:
     with st.spinner("🔊 Extracting audio from video..."):
@@ -122,8 +125,14 @@ if process_button and video_url:
                         summary_result = summarizer(chunk, max_length=150, min_length=50, do_sample=False)
                         summary_text += summary_result[0]["summary_text"] + " "
 
+                    # ---- Format Summary Based on User Selection ----
+                    if summary_format == "Bullet Points":
+                        summary_text = "\n".join([f"- {sentence}" for sentence in summary_text.split(". ") if sentence])
+                    elif summary_format == "Key Highlights":
+                        summary_text = "\n".join([f"✔ {sentence}" for sentence in summary_text.split(". ")[:5]])
+
                     st.success("✅ Summary generated!")
-                    st.text_area("📌 Summary (English):", summary_text, height=150)
+                    st.text_area(f"📌 Summary ({summary_format}):", summary_text, height=150)
 
                 except Exception as e:
                     st.error(f"❌ Error summarizing: {e}")
