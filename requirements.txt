@@ -1,11 +1,6 @@
 streamlit
+torch
 faster-whisper
 transformers
-torch
-torchvision
-torchaudio
-numpy
-ffmpeg-python
-av
-deep-translator
 yt-dlp
+deep-translator
