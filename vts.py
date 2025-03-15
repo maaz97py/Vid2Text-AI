@@ -7,6 +7,7 @@ from transformers import pipeline
 import yt_dlp
 from deep_translator import GoogleTranslator
 import tempfile
+import subprocess
 
 # ---- Set Page Config ----
 st.set_page_config(page_title="Video Transcript Summarizer", layout="wide")
@@ -33,9 +34,17 @@ def set_background(image_file):
 # Call function to set background
 set_background("background.jpeg")
 
+# ---- Update yt-dlp to avoid errors ----
+def update_yt_dlp():
+    try:
+        subprocess.run(["pip", "install", "-U", "yt-dlp"], check=True)
+    except Exception as e:
+        st.warning(f"⚠ Could not update yt-dlp: {e}")
+
+update_yt_dlp()
+
 # ---- UI Title & Description ----
 st.title("🎥 Video Transcript Summarizer")
-
 st.write("Enter a YouTube video link to extract and summarize the transcript.")
 
 # ---- Sidebar: Language & Summary Format Selection ----
@@ -78,6 +87,8 @@ if process_button and video_url:
                     }],
                     'outtmpl': os.path.join(temp_dir, '%(id)s.%(ext)s'),
                     'quiet': True,
+                    'user_agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
+                    'retries': 3  # Retry on failure
                 }
                 with yt_dlp.YoutubeDL(ydl_opts) as ydl:
                     info = ydl.extract_info(video_url, download=True)
@@ -87,6 +98,9 @@ if process_button and video_url:
                     else:
                         raise FileNotFoundError("Downloaded audio file not found.")
                 st.success("✅ Audio extraction completed!")
+            except yt_dlp.utils.DownloadError as e:
+                st.error("❌ Video download failed. Ensure the video is public and accessible.")
+                st.stop()
             except Exception as e:
                 st.error(f"❌ Error extracting audio: {e}")
                 st.stop()
@@ -121,18 +135,18 @@ if process_button and video_url:
         # ---- Step 4: Summarize Transcript ----
         with st.spinner("📄 Summarizing transcript..."):
             summarizer = pipeline("summarization", model="sshleifer/distilbart-cnn-12-6", device=-1)
-
+            
             def chunk_text(text, max_words=400):
                 words = text.split()
                 return [" ".join(words[i:i + max_words]) for i in range(0, len(words), max_words)] if words else []
-
+            
             chunks = chunk_text(transcript_text, max_words=400)
             summary_text = ""
             
             for chunk in chunks:
                 summary_result = summarizer(chunk, max_length=150, min_length=50, do_sample=False)
                 summary_text += summary_result[0]["summary_text"] + " "
-
+            
             if summary_format == "Bullet Points":
                 summary_text = "\n".join([f"- {sentence}" for sentence in summary_text.split(". ") if sentence])
             elif summary_format == "Key Highlights":
@@ -140,9 +154,3 @@ if process_button and video_url:
 
             st.success("✅ Summary generated!")
             st.text_area(f"📌 Summary ({summary_format}):", summary_text, height=150)
-
-        # ---- Step 5: Translate Summary ----
-        with st.spinner(f"🌍 Translating summary to {summary_lang}..."):
-            translated_summary = GoogleTranslator(source="auto", target=languages[summary_lang]).translate(summary_text)
-            st.success("✅ Summary translation completed!")
-            st.text_area(f"📌 Summary in {summary_lang}:", translated_summary, height=150)
