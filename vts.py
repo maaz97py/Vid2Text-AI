@@ -25,6 +25,12 @@ def set_background(image_file):
                 background-position: center;
                 background-attachment: fixed;
             }}
+            .title-text {{
+                font-size: 24px;
+                color: white;
+                font-weight: bold;
+                text-align: center;
+            }}
         </style>
         """,
         unsafe_allow_html=True
@@ -34,23 +40,15 @@ def set_background(image_file):
 set_background("background.jpeg")
 
 # ---- UI Title & Description ----
-st.title("🎥 Video Transcript Summarizer")
-
-st.write("Enter a YouTube video link to extract and summarize the transcript.")
+st.markdown('<p class="title-text">🎥 Video Transcript Summarizer</p>', unsafe_allow_html=True)
+st.markdown('<p class="title-text">Enter a YouTube video link to extract and summarize the transcript.</p>', unsafe_allow_html=True)
+st.markdown('<p class="title-text">🔗 Enter YouTube Video URL:</p>', unsafe_allow_html=True)
 
 # ---- Sidebar: Language & Summary Format Selection ----
 st.sidebar.header("🌍 Language Options")
 languages = {
-    "English": "en",
-    "Telugu": "te",
-    "Hindi": "hi",
-    "Tamil": "ta",
-    "Kannada": "kn",
-    "Malayalam": "ml",
-    "French": "fr",
-    "Spanish": "es",
-    "German": "de",
-    "Chinese": "zh"
+    "English": "en", "Telugu": "te", "Hindi": "hi", "Tamil": "ta", "Kannada": "kn", 
+    "Malayalam": "ml", "French": "fr", "Spanish": "es", "German": "de", "Chinese": "zh"
 }
 transcript_lang = st.sidebar.selectbox("📜 Select Transcript Language", list(languages.keys()))
 summary_lang = st.sidebar.selectbox("📄 Select Summary Language", list(languages.keys()))
@@ -60,7 +58,7 @@ summary_format = st.sidebar.selectbox("📌 Choose Summary Format", ["Paragraph"
 
 # ---- Video URL Input ----
 video_url = st.text_input("🔗 Enter YouTube Video URL:")
-process_button = st.button("▶ Process Video")  # Process Button
+process_button = st.button("▶ Process Video")
 
 if process_button and video_url:
     with tempfile.TemporaryDirectory() as temp_dir:
@@ -91,12 +89,9 @@ if process_button and video_url:
                 st.error(f"❌ Error extracting audio: {e}")
                 st.stop()
 
-        # ---- Step 2: Transcribe Audio ----
+        # ---- Transcribe Audio ----
         with st.spinner("📝 Transcribing audio in English..."):
-            device = "cpu"  # Optimized for CPU
-            model_size = "small"
-
-            model = WhisperModel(model_size, device=device, compute_type="int8")
+            model = WhisperModel("small", device="cpu", compute_type="int8")
             
             if os.path.exists(audio_path):
                 segments, _ = model.transcribe(audio_path, beam_size=2, language="en")
@@ -112,21 +107,21 @@ if process_button and video_url:
                 st.error("❌ Audio file not found.")
                 st.stop()
 
-        # ---- Step 3: Translate Transcript ----
+        # ---- Translate Transcript ----
         with st.spinner(f"🌍 Translating transcript to {transcript_lang}..."):
             translated_transcript = GoogleTranslator(source="auto", target=languages[transcript_lang]).translate(transcript_text)
             st.success("✅ Transcript translation completed!")
             st.text_area(f"📜 Transcript in {transcript_lang}:", translated_transcript, height=200)
 
-        # ---- Step 4: Summarize Transcript ----
+        # ---- Summarize Transcript ----
         with st.spinner("📄 Summarizing transcript..."):
             summarizer = pipeline("summarization", model="sshleifer/distilbart-cnn-12-6", device=-1)
-
+            
             def chunk_text(text, max_words=400):
                 words = text.split()
                 return [" ".join(words[i:i + max_words]) for i in range(0, len(words), max_words)] if words else []
 
-            chunks = chunk_text(transcript_text, max_words=400)
+            chunks = chunk_text(translated_transcript, max_words=400)
             summary_text = ""
             
             for chunk in chunks:
@@ -141,7 +136,7 @@ if process_button and video_url:
             st.success("✅ Summary generated!")
             st.text_area(f"📌 Summary ({summary_format}):", summary_text, height=150)
 
-        # ---- Step 5: Translate Summary ----
+        # ---- Translate Summary ----
         with st.spinner(f"🌍 Translating summary to {summary_lang}..."):
             translated_summary = GoogleTranslator(source="auto", target=languages[summary_lang]).translate(summary_text)
             st.success("✅ Summary translation completed!")
