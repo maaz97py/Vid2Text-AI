@@ -8,6 +8,22 @@ import yt_dlp
 from deep_translator import GoogleTranslator
 import tempfile
 
+from yt_dlp import YoutubeDL
+
+ydl_opts = {
+    'format': 'bestaudio/best',
+    'noplaylist': True,
+    'quiet': True,
+    'http_headers': {
+        'User-Agent': 'Mozilla/5.0'
+    }
+}
+
+with YoutubeDL(ydl_opts) as ydl:
+    info = ydl.extract_info("VIDEO_URL", download=False)
+    audio_url = info['url']
+
+
 # ---- Set Page Config ----
 st.set_page_config(page_title="Video Transcript Summarizer", layout="wide")
 
