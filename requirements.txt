@@ -1,6 +1,6 @@
 streamlit
 torch
-faster-whisper
 transformers
+faster-whisper
 yt-dlp
 deep-translator
