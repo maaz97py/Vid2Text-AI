@@ -8,20 +8,6 @@ import yt_dlp
 from deep_translator import GoogleTranslator
 import tempfile
 
-from yt_dlp import YoutubeDL
-
-ydl_opts = {
-    'format': 'bestaudio/best',
-    'noplaylist': True,
-    'quiet': True,
-    'http_headers': {
-        'User-Agent': 'Mozilla/5.0'
-    }
-}
-
-with YoutubeDL(ydl_opts) as ydl:
-    info = ydl.extract_info("https://www.youtube.com/watch?v=2NRjIl1yDjE", download=False)
-    audio_url = info['url']
 
 
 # ---- Set Page Config ----
