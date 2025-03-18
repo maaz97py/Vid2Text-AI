@@ -8,8 +8,6 @@ import yt_dlp
 from deep_translator import GoogleTranslator
 import tempfile
 
-
-
 # ---- Set Page Config ----
 st.set_page_config(page_title="Video Transcript Summarizer", layout="wide")
 
@@ -37,22 +35,13 @@ set_background("background.jpeg")
 
 # ---- UI Title & Description ----
 st.title("🎥 Video Transcript Summarizer")
-
 st.write("Enter a YouTube video link to extract and summarize the transcript.")
 
 # ---- Sidebar: Language & Summary Format Selection ----
 st.sidebar.header("🌍 Language Options")
 languages = {
-    "English": "en",
-    "Telugu": "te",
-    "Hindi": "hi",
-    "Tamil": "ta",
-    "Kannada": "kn",
-    "Malayalam": "ml",
-    "French": "fr",
-    "Spanish": "es",
-    "German": "de",
-    "Chinese": "zh"
+    "English": "en", "Telugu": "te", "Hindi": "hi", "Tamil": "ta", "Kannada": "kn",
+    "Malayalam": "ml", "French": "fr", "Spanish": "es", "German": "de", "Chinese": "zh"
 }
 transcript_lang = st.sidebar.selectbox("📜 Select Transcript Language", list(languages.keys()))
 summary_lang = st.sidebar.selectbox("📄 Select Summary Language", list(languages.keys()))
@@ -62,7 +51,7 @@ summary_format = st.sidebar.selectbox("📌 Choose Summary Format", ["Paragraph"
 
 # ---- Video URL Input ----
 video_url = st.text_input("🔗 Enter YouTube Video URL:")
-process_button = st.button("▶ Process Video")  # Process Button
+process_button = st.button("▶ Process Video")
 
 if process_button and video_url:
     with tempfile.TemporaryDirectory() as temp_dir:
@@ -80,24 +69,34 @@ if process_button and video_url:
                     }],
                     'outtmpl': os.path.join(temp_dir, '%(id)s.%(ext)s'),
                     'quiet': True,
+                    'noplaylist': True,
+                    'nocheckcertificate': True,
+                    'geo_bypass': True,
+                    'http_headers': {
+                        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36',
+                        'Accept-Language': 'en-US,en;q=0.9',
+                    }
                 }
                 with yt_dlp.YoutubeDL(ydl_opts) as ydl:
-                    info = ydl.extract_info(video_url, download=True)
-                    downloaded_filename = os.path.join(temp_dir, f"{info['id']}.wav")
-                    if os.path.exists(downloaded_filename):
-                        os.rename(downloaded_filename, audio_path)
-                    else:
-                        raise FileNotFoundError("Downloaded audio file not found.")
+                    try:
+                        info = ydl.extract_info(video_url, download=True)
+                        downloaded_filename = os.path.join(temp_dir, f"{info['id']}.wav")
+                        if os.path.exists(downloaded_filename):
+                            os.rename(downloaded_filename, audio_path)
+                        else:
+                            raise FileNotFoundError("Downloaded audio file not found.")
+                    except Exception as e:
+                        st.error(f"❌ Error extracting audio: {e}")
+                        st.stop()
                 st.success("✅ Audio extraction completed!")
             except Exception as e:
-                st.error(f"❌ Error extracting audio: {e}")
+                st.error(f"❌ Error: {e}")
                 st.stop()
 
         # ---- Step 2: Transcribe Audio ----
         with st.spinner("📝 Transcribing audio in English..."):
-            device = "cpu"  # Optimized for CPU
+            device = "cpu"
             model_size = "small"
-
             model = WhisperModel(model_size, device=device, compute_type="int8")
             
             if os.path.exists(audio_path):
@@ -123,11 +122,11 @@ if process_button and video_url:
         # ---- Step 4: Summarize Transcript ----
         with st.spinner("📄 Summarizing transcript..."):
             summarizer = pipeline("summarization", model="sshleifer/distilbart-cnn-12-6", device=-1)
-
+            
             def chunk_text(text, max_words=400):
                 words = text.split()
                 return [" ".join(words[i:i + max_words]) for i in range(0, len(words), max_words)] if words else []
-
+            
             chunks = chunk_text(transcript_text, max_words=400)
             summary_text = ""
             
