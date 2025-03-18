@@ -20,7 +20,7 @@ ydl_opts = {
 }
 
 with YoutubeDL(ydl_opts) as ydl:
-    info = ydl.extract_info("VIDEO_URL", download=False)
+    info = ydl.extract_info("https://www.youtube.com/watch?v=2NRjIl1yDjE", download=False)
     audio_url = info['url']
 
 
